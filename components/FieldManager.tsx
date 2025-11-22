@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import type { Field, DataType, DateFormat, ExportFormat, DistributionType, GeneratedRow } from '@/types';
 import FieldItem from './FieldItem';
+import TypeSelectorModal from './TypeSelectorModal';
 import { generateData } from '@/lib/generator';
 import { exportToCSV } from '@/lib/csv-exporter';
 import { exportToJSON } from '@/lib/json-exporter';
@@ -37,11 +38,33 @@ export default function FieldManager() {
   // État pour l'aperçu temps réel (MVP 3)
   const [previewData, setPreviewData] = useState<GeneratedRow[]>([]);
   
+  // État pour la modal de sélection de type
+  const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
+  
   // État pour l'édition
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
 
   // Vérifie si au moins un champ de type date existe
   const hasDateField = fields.some((field) => field.type === 'date');
+
+  // Obtient le label d'un type de données
+  const getTypeLabel = (type: DataType): string => {
+    const labels: Record<DataType, string> = {
+      text: 'Texte',
+      number: 'Nombre',
+      date: 'Date',
+      boolean: 'Booléen',
+      email: 'Email',
+      firstName: 'Prénom',
+      lastName: 'Nom',
+      uuid: 'UUID',
+      sentence: 'Phrase',
+      taille: 'Taille',
+      ipv4: 'IPv4',
+      ipv6: 'IPv6',
+    };
+    return labels[type];
+  };
 
   // Génère l'aperçu automatiquement avec debounce (MVP 3)
   useEffect(() => {
@@ -337,24 +360,14 @@ export default function FieldManager() {
               placeholder="Nom du champ"
               className="flex-1 px-4 py-2 border border-dusk-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-amethyst-500 bg-white text-dusk-blue-900"
             />
-            <select
-              value={fieldType}
-              onChange={(e) => setFieldType(e.target.value as DataType)}
-              className="px-4 py-2 border border-dusk-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-amethyst-500 bg-white text-dusk-blue-900"
+            <button
+              type="button"
+              onClick={() => setIsTypeModalOpen(true)}
+              className="px-4 py-2 border border-dusk-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-amethyst-500 bg-white text-dusk-blue-900 hover:bg-dusk-blue-50 transition-colors flex items-center justify-between gap-2 min-w-[140px]"
             >
-              <option value="text">Texte</option>
-              <option value="number">Nombre</option>
-              <option value="date">Date</option>
-              <option value="boolean">Booléen</option>
-              <option value="email">Email</option>
-              <option value="firstName">Prénom</option>
-              <option value="lastName">Nom</option>
-              <option value="uuid">UUID</option>
-              <option value="sentence">Phrase</option>
-              <option value="taille">Taille</option>
-              <option value="ipv4">IPv4</option>
-              <option value="ipv6">IPv6</option>
-            </select>
+              <span>{getTypeLabel(fieldType)}</span>
+              <span className="text-dusk-blue-600">▼</span>
+            </button>
           </div>
 
           {/* Contraintes pour les nombres */}
@@ -709,6 +722,14 @@ export default function FieldManager() {
           Générer et télécharger {exportFormat.toUpperCase()}
         </button>
       </div>
+
+      {/* Modal de sélection de type */}
+      <TypeSelectorModal
+        isOpen={isTypeModalOpen}
+        onClose={() => setIsTypeModalOpen(false)}
+        onSelect={setFieldType}
+        currentType={fieldType}
+      />
     </div>
   );
 }
