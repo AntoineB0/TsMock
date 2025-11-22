@@ -16,6 +16,9 @@ const dataTypeLabels: Record<Field['type'], string> = {
   lastName: 'Nom',
   uuid: 'UUID',
   sentence: 'Phrase',
+  taille: 'Taille',
+  ipv4: 'IPv4',
+  ipv6: 'IPv6',
 };
 
 export default function FieldItem({ field, onDelete, onEdit }: FieldItemProps) {
@@ -23,12 +26,22 @@ export default function FieldItem({ field, onDelete, onEdit }: FieldItemProps) {
     if (field.type === 'number' && field.constraints) {
       const min = field.constraints.numberMin ?? 0;
       const max = field.constraints.numberMax ?? 10000;
-      return `[${min} - ${max}]`;
+      const dist = field.constraints.distribution;
+      const distText = dist && dist !== 'random' ? ` (${dist})` : '';
+      return `[${min} - ${max}]${distText}`;
     }
     if (field.type === 'date' && field.constraints) {
       const min = field.constraints.dateMin || '5 ans';
       const max = field.constraints.dateMax || "aujourd'hui";
       return `[${min} - ${max}]`;
+    }
+    if (field.type === 'taille' && field.constraints) {
+      const min = field.constraints.lengthMin ?? 1;
+      const max = field.constraints.lengthMax ?? 100;
+      const unit = field.constraints.lengthUnit ?? 'mb';
+      const dist = field.constraints.distribution;
+      const distText = dist && dist !== 'random' ? ` (${dist})` : '';
+      return `[${min}-${max} ${unit.toUpperCase()}]${distText}`;
     }
     return null;
   };
