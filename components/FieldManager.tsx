@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import type { Field, DataType, DateFormat, ExportFormat } from '@/types';
+import { useState, useEffect } from 'react';
+import type { Field, DataType, DateFormat, ExportFormat, DistributionType, GeneratedRow } from '@/types';
 import FieldItem from './FieldItem';
 import { generateData } from '@/lib/generator';
 import { exportToCSV } from '@/lib/csv-exporter';
@@ -17,17 +17,50 @@ export default function FieldManager() {
   const [exportFormat, setExportFormat] = useState<ExportFormat>('csv');
   const [tableName, setTableName] = useState('mock_data');
   
-  // États pour les contraintes
+  // États pour les contraintes de base
   const [numberMin, setNumberMin] = useState<string>('0');
   const [numberMax, setNumberMax] = useState<string>('10000');
   const [dateMin, setDateMin] = useState<string>('');
   const [dateMax, setDateMax] = useState<string>('');
+  
+  // États pour les distributions (MVP 3)
+  const [distribution, setDistribution] = useState<DistributionType>('random');
+  const [distributionMean, setDistributionMean] = useState<string>('');
+  const [distributionStdDev, setDistributionStdDev] = useState<string>('');
+  const [distributionLambda, setDistributionLambda] = useState<string>('');
+  
+  // États pour le type taille (MVP 3)
+  const [lengthMin, setLengthMin] = useState<string>('1');
+  const [lengthMax, setLengthMax] = useState<string>('100');
+  const [lengthUnit, setLengthUnit] = useState<'bytes' | 'kb' | 'mb' | 'gb'>('mb');
+  
+  // État pour l'aperçu temps réel (MVP 3)
+  const [previewData, setPreviewData] = useState<GeneratedRow[]>([]);
   
   // État pour l'édition
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
 
   // Vérifie si au moins un champ de type date existe
   const hasDateField = fields.some((field) => field.type === 'date');
+
+  // Génère l'aperçu automatiquement avec debounce (MVP 3)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (fields.length > 0) {
+        try {
+          const preview = generateData(fields, 5, dateFormat);
+          setPreviewData(preview);
+        } catch (error) {
+          console.error('Erreur lors de la génération de l\'aperçu:', error);
+          setPreviewData([]);
+        }
+      } else {
+        setPreviewData([]);
+      }
+    }, 300); // Debounce de 300ms
+    
+    return () => clearTimeout(timer);
+  }, [fields, dateFormat]);
 
   const addField = () => {
     if (!fieldName.trim()) {
@@ -53,6 +86,40 @@ export default function FieldManager() {
       }
       constraints.numberMin = min;
       constraints.numberMax = max;
+      
+      // Ajouter les paramètres de distribution (MVP 3)
+      if (distribution !== 'random') {
+        constraints.distribution = distribution;
+        constraints.distributionParams = {};
+        
+        if (distribution === 'gaussian') {
+          const mean = parseFloat(distributionMean);
+          const stdDev = parseFloat(distributionStdDev);
+          
+          if (distributionMean && isNaN(mean)) {
+            alert('La moyenne doit être un nombre valide');
+            return;
+          }
+          if (distributionStdDev && (isNaN(stdDev) || stdDev <= 0)) {
+            alert('L\'écart-type doit être un nombre positif');
+            return;
+          }
+          
+          if (distributionMean) constraints.distributionParams.mean = mean;
+          if (distributionStdDev) constraints.distributionParams.stdDev = stdDev;
+        }
+        
+        if (distribution === 'exponential' || distribution === 'poisson') {
+          const lambda = parseFloat(distributionLambda);
+          
+          if (!distributionLambda || isNaN(lambda) || lambda <= 0) {
+            alert('Lambda (λ) doit être un nombre positif pour la distribution ' + distribution);
+            return;
+          }
+          
+          constraints.distributionParams.lambda = lambda;
+        }
+      }
     }
 
     // Ajouter les contraintes pour les dates
@@ -63,6 +130,59 @@ export default function FieldManager() {
       if (dateMin && dateMax && new Date(dateMin) > new Date(dateMax)) {
         alert('La date minimum ne peut pas être postérieure à la date maximum');
         return;
+      }
+    }
+    
+    // Ajouter les contraintes pour le type taille (MVP 3)
+    if (fieldType === 'taille') {
+      const min = parseInt(lengthMin);
+      const max = parseInt(lengthMax);
+      
+      if (isNaN(min) || isNaN(max) || min < 0 || max < 0) {
+        alert('Les valeurs de taille doivent être des nombres positifs');
+        return;
+      }
+      if (min > max) {
+        alert('La taille minimum ne peut pas être supérieure à la taille maximum');
+        return;
+      }
+      
+      constraints.lengthMin = min;
+      constraints.lengthMax = max;
+      constraints.lengthUnit = lengthUnit;
+      
+      // Ajouter les paramètres de distribution pour taille
+      if (distribution !== 'random') {
+        constraints.distribution = distribution;
+        constraints.distributionParams = {};
+        
+        if (distribution === 'gaussian') {
+          const mean = parseFloat(distributionMean);
+          const stdDev = parseFloat(distributionStdDev);
+          
+          if (distributionMean && isNaN(mean)) {
+            alert('La moyenne doit être un nombre valide');
+            return;
+          }
+          if (distributionStdDev && (isNaN(stdDev) || stdDev <= 0)) {
+            alert('L\'écart-type doit être un nombre positif');
+            return;
+          }
+          
+          if (distributionMean) constraints.distributionParams.mean = mean;
+          if (distributionStdDev) constraints.distributionParams.stdDev = stdDev;
+        }
+        
+        if (distribution === 'exponential' || distribution === 'poisson') {
+          const lambda = parseFloat(distributionLambda);
+          
+          if (!distributionLambda || isNaN(lambda) || lambda <= 0) {
+            alert('Lambda (λ) doit être un nombre positif pour la distribution ' + distribution);
+            return;
+          }
+          
+          constraints.distributionParams.lambda = lambda;
+        }
       }
     }
 
@@ -92,6 +212,13 @@ export default function FieldManager() {
     setNumberMax('10000');
     setDateMin('');
     setDateMax('');
+    setDistribution('random');
+    setDistributionMean('');
+    setDistributionStdDev('');
+    setDistributionLambda('');
+    setLengthMin('1');
+    setLengthMax('100');
+    setLengthUnit('mb');
   };
 
   const editField = (id: string) => {
@@ -105,11 +232,31 @@ export default function FieldManager() {
     if (field.type === 'number' && field.constraints) {
       setNumberMin(String(field.constraints.numberMin ?? 0));
       setNumberMax(String(field.constraints.numberMax ?? 10000));
+      setDistribution(field.constraints.distribution ?? 'random');
+      
+      if (field.constraints.distributionParams) {
+        setDistributionMean(String(field.constraints.distributionParams.mean ?? ''));
+        setDistributionStdDev(String(field.constraints.distributionParams.stdDev ?? ''));
+        setDistributionLambda(String(field.constraints.distributionParams.lambda ?? ''));
+      }
     }
     
     if (field.type === 'date' && field.constraints) {
       setDateMin(field.constraints.dateMin || '');
       setDateMax(field.constraints.dateMax || '');
+    }
+    
+    if (field.type === 'taille' && field.constraints) {
+      setLengthMin(String(field.constraints.lengthMin ?? 1));
+      setLengthMax(String(field.constraints.lengthMax ?? 100));
+      setLengthUnit(field.constraints.lengthUnit ?? 'mb');
+      setDistribution(field.constraints.distribution ?? 'random');
+      
+      if (field.constraints.distributionParams) {
+        setDistributionMean(String(field.constraints.distributionParams.mean ?? ''));
+        setDistributionStdDev(String(field.constraints.distributionParams.stdDev ?? ''));
+        setDistributionLambda(String(field.constraints.distributionParams.lambda ?? ''));
+      }
     }
   };
 
@@ -121,6 +268,13 @@ export default function FieldManager() {
     setNumberMax('10000');
     setDateMin('');
     setDateMax('');
+    setDistribution('random');
+    setDistributionMean('');
+    setDistributionStdDev('');
+    setDistributionLambda('');
+    setLengthMin('1');
+    setLengthMax('100');
+    setLengthUnit('mb');
   };
 
   const deleteField = (id: string) => {
@@ -197,28 +351,173 @@ export default function FieldManager() {
               <option value="lastName">Nom</option>
               <option value="uuid">UUID</option>
               <option value="sentence">Phrase</option>
+              <option value="taille">Taille</option>
+              <option value="ipv4">IPv4</option>
+              <option value="ipv6">IPv6</option>
             </select>
           </div>
 
           {/* Contraintes pour les nombres */}
           {fieldType === 'number' && (
-            <div className="flex gap-3 items-center">
-              <label className="text-sm font-medium text-dusk-blue-800">Intervalle:</label>
-              <input
-                type="number"
-                value={numberMin}
-                onChange={(e) => setNumberMin(e.target.value)}
-                placeholder="Min"
-                className="flex-1 px-4 py-2 border border-dusk-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-amethyst-500 bg-white text-dusk-blue-900"
-              />
-              <span className="text-dusk-blue-600">à</span>
-              <input
-                type="number"
-                value={numberMax}
-                onChange={(e) => setNumberMax(e.target.value)}
-                placeholder="Max"
-                className="flex-1 px-4 py-2 border border-dusk-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-amethyst-500 bg-white text-dusk-blue-900"
-              />
+            <div className="space-y-3">
+              <div className="flex gap-3 items-center">
+                <label className="text-sm font-medium text-dusk-blue-800">Intervalle:</label>
+                <input
+                  type="number"
+                  value={numberMin}
+                  onChange={(e) => setNumberMin(e.target.value)}
+                  placeholder="Min"
+                  className="flex-1 px-4 py-2 border border-dusk-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-amethyst-500 bg-white text-dusk-blue-900"
+                />
+                <span className="text-dusk-blue-600">à</span>
+                <input
+                  type="number"
+                  value={numberMax}
+                  onChange={(e) => setNumberMax(e.target.value)}
+                  placeholder="Max"
+                  className="flex-1 px-4 py-2 border border-dusk-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-amethyst-500 bg-white text-dusk-blue-900"
+                />
+              </div>
+              
+              {/* Sélecteur de distribution */}
+              <div className="flex gap-3 items-center">
+                <label className="text-sm font-medium text-dusk-blue-800">Distribution:</label>
+                <select
+                  value={distribution}
+                  onChange={(e) => setDistribution(e.target.value as DistributionType)}
+                  className="flex-1 px-4 py-2 border border-dusk-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-amethyst-500 bg-white text-dusk-blue-900"
+                >
+                  <option value="random">Aléatoire (uniforme)</option>
+                  <option value="gaussian">Gaussienne (normale)</option>
+                  <option value="exponential">Exponentielle</option>
+                  <option value="poisson">Poisson</option>
+                </select>
+              </div>
+              
+              {/* Paramètres pour distribution gaussienne */}
+              {distribution === 'gaussian' && (
+                <div className="flex gap-3 items-center pl-4 border-l-2 border-dark-amethyst-300">
+                  <label className="text-sm font-medium text-dusk-blue-800">Paramètres:</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={distributionMean}
+                    onChange={(e) => setDistributionMean(e.target.value)}
+                    placeholder="Moyenne (μ)"
+                    className="flex-1 px-4 py-2 border border-dusk-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-amethyst-500 bg-white text-dusk-blue-900"
+                  />
+                  <input
+                    type="number"
+                    step="any"
+                    value={distributionStdDev}
+                    onChange={(e) => setDistributionStdDev(e.target.value)}
+                    placeholder="Écart-type (σ)"
+                    className="flex-1 px-4 py-2 border border-dusk-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-amethyst-500 bg-white text-dusk-blue-900"
+                  />
+                </div>
+              )}
+              
+              {/* Paramètres pour distributions exponentielles et Poisson */}
+              {(distribution === 'exponential' || distribution === 'poisson') && (
+                <div className="flex gap-3 items-center pl-4 border-l-2 border-dark-amethyst-300">
+                  <label className="text-sm font-medium text-dusk-blue-800">Paramètre:</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={distributionLambda}
+                    onChange={(e) => setDistributionLambda(e.target.value)}
+                    placeholder="Lambda (λ)"
+                    className="flex-1 px-4 py-2 border border-dusk-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-amethyst-500 bg-white text-dusk-blue-900"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Contraintes pour le type taille */}
+          {fieldType === 'taille' && (
+            <div className="space-y-3">
+              <div className="flex gap-3 items-center">
+                <label className="text-sm font-medium text-dusk-blue-800">Intervalle:</label>
+                <input
+                  type="number"
+                  value={lengthMin}
+                  onChange={(e) => setLengthMin(e.target.value)}
+                  placeholder="Min"
+                  className="flex-1 px-4 py-2 border border-dusk-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-amethyst-500 bg-white text-dusk-blue-900"
+                />
+                <span className="text-dusk-blue-600">à</span>
+                <input
+                  type="number"
+                  value={lengthMax}
+                  onChange={(e) => setLengthMax(e.target.value)}
+                  placeholder="Max"
+                  className="flex-1 px-4 py-2 border border-dusk-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-amethyst-500 bg-white text-dusk-blue-900"
+                />
+                <select
+                  value={lengthUnit}
+                  onChange={(e) => setLengthUnit(e.target.value as 'bytes' | 'kb' | 'mb' | 'gb')}
+                  className="px-4 py-2 border border-dusk-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-amethyst-500 bg-white text-dusk-blue-900"
+                >
+                  <option value="bytes">Bytes</option>
+                  <option value="kb">KB</option>
+                  <option value="mb">MB</option>
+                  <option value="gb">GB</option>
+                </select>
+              </div>
+              
+              {/* Sélecteur de distribution pour taille */}
+              <div className="flex gap-3 items-center">
+                <label className="text-sm font-medium text-dusk-blue-800">Distribution:</label>
+                <select
+                  value={distribution}
+                  onChange={(e) => setDistribution(e.target.value as DistributionType)}
+                  className="flex-1 px-4 py-2 border border-dusk-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-amethyst-500 bg-white text-dusk-blue-900"
+                >
+                  <option value="random">Aléatoire (uniforme)</option>
+                  <option value="gaussian">Gaussienne (normale)</option>
+                  <option value="exponential">Exponentielle</option>
+                  <option value="poisson">Poisson</option>
+                </select>
+              </div>
+              
+              {/* Paramètres pour distribution gaussienne */}
+              {distribution === 'gaussian' && (
+                <div className="flex gap-3 items-center pl-4 border-l-2 border-dark-amethyst-300">
+                  <label className="text-sm font-medium text-dusk-blue-800">Paramètres:</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={distributionMean}
+                    onChange={(e) => setDistributionMean(e.target.value)}
+                    placeholder="Moyenne (μ)"
+                    className="flex-1 px-4 py-2 border border-dusk-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-amethyst-500 bg-white text-dusk-blue-900"
+                  />
+                  <input
+                    type="number"
+                    step="any"
+                    value={distributionStdDev}
+                    onChange={(e) => setDistributionStdDev(e.target.value)}
+                    placeholder="Écart-type (σ)"
+                    className="flex-1 px-4 py-2 border border-dusk-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-amethyst-500 bg-white text-dusk-blue-900"
+                  />
+                </div>
+              )}
+              
+              {/* Paramètres pour distributions exponentielles et Poisson */}
+              {(distribution === 'exponential' || distribution === 'poisson') && (
+                <div className="flex gap-3 items-center pl-4 border-l-2 border-dark-amethyst-300">
+                  <label className="text-sm font-medium text-dusk-blue-800">Paramètre:</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={distributionLambda}
+                    onChange={(e) => setDistributionLambda(e.target.value)}
+                    placeholder="Lambda (λ)"
+                    className="flex-1 px-4 py-2 border border-dusk-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-amethyst-500 bg-white text-dusk-blue-900"
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -273,6 +572,58 @@ export default function FieldManager() {
             {fields.map((field) => (
               <FieldItem key={field.id} field={field} onDelete={deleteField} onEdit={editField} />
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Aperçu temps réel (MVP 3) */}
+      {previewData.length > 0 && (
+        <div className="bg-white p-6 rounded-lg shadow-md border border-dusk-blue-200">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-dusk-blue-900">
+              Aperçu des données (5 lignes)
+            </h2>
+            <button
+              onClick={() => {
+                const preview = generateData(fields, 5, dateFormat);
+                setPreviewData(preview);
+              }}
+              className="text-sm px-3 py-1 text-dark-amethyst-700 hover:text-dark-amethyst-900 hover:bg-dark-amethyst-50 rounded transition-colors"
+              title="Actualiser l'aperçu"
+            >
+              🔄 Actualiser
+            </button>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-deep-space-blue-100">
+                  {fields.map((field) => (
+                    <th
+                      key={field.id}
+                      className="px-4 py-2 text-left text-sm font-medium text-dusk-blue-900 border border-dusk-blue-200"
+                    >
+                      {field.name}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {previewData.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-deep-space-blue-50 transition-colors">
+                    {fields.map((field) => (
+                      <td
+                        key={field.id}
+                        className="px-4 py-2 text-sm text-dusk-blue-800 border border-dusk-blue-200"
+                      >
+                        {String(row[field.name])}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
