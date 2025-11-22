@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import type { Field, DataType, DateFormat } from '@/types';
+import type { Field, DataType, DateFormat, ExportFormat } from '@/types';
 import FieldItem from './FieldItem';
 import { generateData } from '@/lib/generator';
 import { exportToCSV } from '@/lib/csv-exporter';
+import { exportToJSON } from '@/lib/json-exporter';
+import { exportToSQL } from '@/lib/sql-exporter';
 
 export default function FieldManager() {
   const [fields, setFields] = useState<Field[]>([]);
@@ -12,6 +14,8 @@ export default function FieldManager() {
   const [fieldType, setFieldType] = useState<DataType>('text');
   const [rowCount, setRowCount] = useState(100);
   const [dateFormat, setDateFormat] = useState<DateFormat>('iso');
+  const [exportFormat, setExportFormat] = useState<ExportFormat>('csv');
+  const [tableName, setTableName] = useState('mock_data');
   
   // États pour les contraintes
   const [numberMin, setNumberMin] = useState<string>('0');
@@ -134,11 +138,26 @@ export default function FieldManager() {
       return;
     }
 
+    if (exportFormat === 'sql' && !tableName.trim()) {
+      alert('Veuillez entrer un nom de table pour l\'export SQL');
+      return;
+    }
+
     // Générer les données
     const data = generateData(fields, rowCount, dateFormat);
     
-    // Exporter en CSV
-    exportToCSV(data, 'mock-data.csv');
+    // Exporter selon le format choisi
+    switch (exportFormat) {
+      case 'csv':
+        exportToCSV(data, 'mock-data.csv');
+        break;
+      case 'json':
+        exportToJSON(data, 'mock-data.json');
+        break;
+      case 'sql':
+        exportToSQL(data, tableName.trim(), 'mock-data.sql');
+        break;
+    }
   };
 
   return (
@@ -146,7 +165,7 @@ export default function FieldManager() {
       {/* En-tête */}
       <div>
         <h1 className="text-3xl font-bold text-dusk-blue-900">Générateur de Données Mock</h1>
-        <p className="mt-2 text-dusk-blue-700">Créez rapidement des jeux de données CSV pour vos tests</p>
+        <p className="mt-2 text-dusk-blue-700">Créez rapidement des jeux de données CSV, JSON ou SQL pour vos tests</p>
       </div>
 
       {/* Formulaire d'ajout de champ */}
@@ -173,6 +192,11 @@ export default function FieldManager() {
               <option value="number">Nombre</option>
               <option value="date">Date</option>
               <option value="boolean">Booléen</option>
+              <option value="email">Email</option>
+              <option value="firstName">Prénom</option>
+              <option value="lastName">Nom</option>
+              <option value="uuid">UUID</option>
+              <option value="sentence">Phrase</option>
             </select>
           </div>
 
@@ -289,6 +313,38 @@ export default function FieldManager() {
               </select>
             </div>
           )}
+
+          <div>
+            <label htmlFor="exportFormat" className="block text-sm font-medium text-dusk-blue-800 mb-2">
+              Format d&apos;export
+            </label>
+            <select
+              id="exportFormat"
+              value={exportFormat}
+              onChange={(e) => setExportFormat(e.target.value as ExportFormat)}
+              className="w-full px-4 py-2 border border-dusk-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-amethyst-500 bg-white text-dusk-blue-900"
+            >
+              <option value="csv">CSV</option>
+              <option value="json">JSON</option>
+              <option value="sql">SQL</option>
+            </select>
+          </div>
+
+          {exportFormat === 'sql' && (
+            <div>
+              <label htmlFor="tableName" className="block text-sm font-medium text-dusk-blue-800 mb-2">
+                Nom de la table SQL
+              </label>
+              <input
+                id="tableName"
+                type="text"
+                value={tableName}
+                onChange={(e) => setTableName(e.target.value)}
+                placeholder="mock_data"
+                className="w-full px-4 py-2 border border-dusk-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-dark-amethyst-500 bg-white text-dusk-blue-900"
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -299,7 +355,7 @@ export default function FieldManager() {
           disabled={fields.length === 0}
           className="px-8 py-3 bg-lime-cream-600 text-white font-semibold rounded-lg hover:bg-lime-cream-700 disabled:bg-dusk-blue-300 disabled:cursor-not-allowed transition-colors text-lg shadow-lg"
         >
-          Générer et télécharger le CSV
+          Générer et télécharger {exportFormat.toUpperCase()}
         </button>
       </div>
     </div>
