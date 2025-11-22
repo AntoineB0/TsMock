@@ -11,6 +11,11 @@ const dataTypeLabels: Record<Field['type'], string> = {
   number: 'Nombre',
   date: 'Date',
   boolean: 'Booléen',
+  email: 'Email',
+  firstName: 'Prénom',
+  lastName: 'Nom',
+  uuid: 'UUID',
+  sentence: 'Phrase',
 };
 
 export default function FieldItem({ field, onDelete, onEdit }: FieldItemProps) {
