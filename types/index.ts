@@ -1,6 +1,8 @@
-export type DataType = 'text' | 'number' | 'date' | 'boolean';
+export type DataType = 'text' | 'number' | 'date' | 'boolean' | 'email' | 'firstName' | 'lastName' | 'uuid' | 'sentence';
 
 export type DateFormat = 'iso' | 'fr' | 'us' | 'timestamp';
+
+export type ExportFormat = 'csv' | 'json' | 'sql';
 
 export interface FieldConstraints {
   // Pour les nombres
