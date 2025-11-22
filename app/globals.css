@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* Dark Amethyst */
+  --color-dark-amethyst-50: #ece8fc;
+  --color-dark-amethyst-100: #d8d2f9;
+  --color-dark-amethyst-200: #b1a4f4;
+  --color-dark-amethyst-300: #8b77ee;
+  --color-dark-amethyst-400: #6449e9;
+  --color-dark-amethyst-500: #3d1ce3;
+  --color-dark-amethyst-600: #3116b6;
+  --color-dark-amethyst-700: #251188;
+  --color-dark-amethyst-800: #180b5b;
+  --color-dark-amethyst-900: #0c062d;
+  --color-dark-amethyst-950: #090420;
+
+  /* Deep Space Blue */
+  --color-deep-space-blue-50: #ebf2f9;
+  --color-deep-space-blue-100: #d8e4f3;
+  --color-deep-space-blue-200: #b1c9e7;
+  --color-deep-space-blue-300: #8aaedb;
+  --color-deep-space-blue-400: #6394cf;
+  --color-deep-space-blue-500: #3c79c3;
+  --color-deep-space-blue-600: #30619c;
+  --color-deep-space-blue-700: #244875;
+  --color-deep-space-blue-800: #18304e;
+  --color-deep-space-blue-900: #0c1827;
+  --color-deep-space-blue-950: #08111b;
+
+  /* Dusk Blue */
+  --color-dusk-blue-50: #eef1f7;
+  --color-dusk-blue-100: #dce3ef;
+  --color-dusk-blue-200: #bac6de;
+  --color-dusk-blue-300: #97aace;
+  --color-dusk-blue-400: #748ebe;
+  --color-dusk-blue-500: #5272ad;
+  --color-dusk-blue-600: #415b8b;
+  --color-dusk-blue-700: #314468;
+  --color-dusk-blue-800: #212d45;
+  --color-dusk-blue-900: #101723;
+  --color-dusk-blue-950: #0b1018;
+
+  /* Muted Teal */
+  --color-muted-teal-50: #eff6f4;
+  --color-muted-teal-100: #deede9;
+  --color-muted-teal-200: #bedad4;
+  --color-muted-teal-300: #9dc8be;
+  --color-muted-teal-400: #7cb6a8;
+  --color-muted-teal-500: #5ca393;
+  --color-muted-teal-600: #498375;
+  --color-muted-teal-700: #376258;
+  --color-muted-teal-800: #25413b;
+  --color-muted-teal-900: #12211d;
+  --color-muted-teal-950: #0d1715;
+
+  /* Lime Cream */
+  --color-lime-cream-50: #f8fde7;
+  --color-lime-cream-100: #f0fbd0;
+  --color-lime-cream-200: #e2f8a0;
+  --color-lime-cream-300: #d3f471;
+  --color-lime-cream-400: #c5f141;
+  --color-lime-cream-500: #b6ed12;
+  --color-lime-cream-600: #92be0e;
+  --color-lime-cream-700: #6d8e0b;
+  --color-lime-cream-800: #495f07;
+  --color-lime-cream-900: #242f04;
+  --color-lime-cream-950: #1a2102;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
