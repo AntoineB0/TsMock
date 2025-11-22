@@ -59,6 +59,16 @@ function generateFieldValue(field: Field, dateFormat: DateFormat): string | numb
       return formatDate(randomDate, dateFormat);
     case 'boolean':
       return faker.datatype.boolean();
+    case 'email':
+      return faker.internet.email();
+    case 'firstName':
+      return faker.person.firstName();
+    case 'lastName':
+      return faker.person.lastName();
+    case 'uuid':
+      return faker.string.uuid();
+    case 'sentence':
+      return faker.lorem.sentence();
     default:
       return '';
   }
